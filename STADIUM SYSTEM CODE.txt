@@ -1,0 +1,439 @@
+import java.util.*;
+public class StadiumBookingSystem {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        StadiumManager manager = new StadiumManager();
+
+        System.out.println("Welcome to Stadium Booking System!");
+
+        while (true) {
+            System.out.println("\n1. Add Facility");
+            System.out.println("2. View Facilities");
+            System.out.println("3. Make Booking");
+            System.out.println("4. View Bookings");
+            System.out.println("5. Cancel Booking");
+            System.out.println("6. Exit");
+            System.out.print("Enter your choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // consume newline
+            switch (choice) {
+                case 1:
+                    manager.addFacility(scanner);
+                    break;
+                case 2:
+                    manager.viewFacilities();
+                    break;
+                case 3:
+                    manager.makeBooking(scanner);
+                    break;
+                case 4:
+                    manager.viewBookings();
+                    break;
+                case 5:
+                    manager.cancelBooking(scanner);
+                    break;
+                case 6:
+                    System.out.println("Exiting Stadium Booking System. Goodbye");
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+}
+
+
+
+
+	public abstract class StadiumFacility {
+    private final String facilityName;
+    private final int capacity;
+    private int currentBookings; // Tracks how many units are booked
+
+    public StadiumFacility(String facilityName, int capacity) {
+
+        this.facilityName = facilityName;
+        this.capacity = capacity;
+        this.currentBookings = 0; // Initially, no units are booked
+    }
+
+    public String getFacilityName() {
+        return facilityName;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public int getCurrentBookings() {
+        return currentBookings;
+    }
+
+    public void bookUnits(int units) {
+        if (currentBookings + units <= capacity) {
+            currentBookings += units;
+        } else
+
+        {
+            throw new IllegalArgumentException("Booking exceeds facility capacity!");
+        }
+    }
+
+    public boolean checkAvailability(int requestedUnits) {
+        return currentBookings + requestedUnits <= capacity;
+    }
+
+    @Override
+    public String toString() {
+        return "Facility Name: " + facilityName + ", Capacity: " + capacity +
+                ", Current Bookings: " + currentBookings;
+    }
+}
+
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    public class Booking {
+        private static final int TOTAL_UNITS= 0 ;
+        private final String facilityName;
+        private final String bookingDate; // Format: yyyy-MM-dd
+        private final String bookingTime; // Format: HH:mm
+
+        public Booking(String facilityName, String bookingDate, String bookingTime) {
+            this.facilityName = facilityName;
+            this.bookingDate = bookingDate;
+            this.bookingTime = bookingTime;
+        }
+
+        public static List<Booking> bookings = new ArrayList<>();
+
+        public static void makeBooking(String facilityName, String bookingDate, String bookingTime) {
+            // Validate date format
+            if (!bookingDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                throw new IllegalArgumentException("Invalid date format. Use yyyy-MM-dd.");
+            }
+
+            // Validate time format
+            if (!bookingTime.matches("^([01]?\\d|2[0-3]):[0-5]\\d$")) {
+                throw new IllegalArgumentException("Invalid time format. Use HH:mm.");
+            }
+
+            // Validate that the date is not in the past
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate enteredDate = java.time.LocalDate.parse(bookingDate);
+            if (enteredDate.isBefore(today)) {
+                throw new IllegalArgumentException("Cannot book for a past date. Please select a valid date.");
+            }
+
+            bookings.add(new Booking(facilityName, bookingDate, bookingTime));
+            System.out.println("Booking made successfully for " + facilityName + " on "
+                    + bookingDate + " at " + bookingTime + "!");
+        }
+
+        // Display all bookings (GUI method)
+        public static List<String> viewBookings() {
+            List<String> bookingStrings = new ArrayList<>();
+            if (bookings.isEmpty()) {
+                System.out.println("No bookings found.");
+            } else {
+                for (Booking booking : bookings) {
+                    bookingStrings.add(booking.toString());
+                }
+            }
+            return bookingStrings;
+        }
+
+        // Cancel a booking (GUI method)
+        public static boolean cancelBooking(String facilityName, String bookingDate, String bookingTime) {
+            boolean isRemoved = bookings.removeIf(b -> b.facilityName.equalsIgnoreCase(facilityName) &&
+                    b.bookingDate.equalsIgnoreCase(bookingDate) &&
+                    b.bookingTime.equalsIgnoreCase(bookingTime));
+            if (isRemoved) {
+                System.out.println("Booking canceled successfully for " + facilityName + " on "
+                        + bookingDate + " at " + bookingTime + "!");
+            } else {
+                System.out.println("Booking not found.");
+            }
+            return isRemoved;
+        }
+
+        // Check if a facility is available for a specific date and time
+        public static boolean isAvailable(String facilityName, String bookingDate, String bookingTime) {
+            for (Booking booking : bookings) {
+                if (booking.facilityName.equalsIgnoreCase(facilityName) &&
+                        booking.bookingDate.equalsIgnoreCase(bookingDate) &&
+                        booking.bookingTime.equalsIgnoreCase(bookingTime)) {
+                    return false; // Booking already exists
+                }
+            }
+            return true; // Facility is available
+        }
+
+        // BOTH METHODS ARE FOR THE GUI IMPLEMENTATION ONLY
+
+        public static int getBookedUnits(String facilityName) {
+            return (int) bookings.stream()
+                    .filter(b -> b.facilityName.equalsIgnoreCase(facilityName))
+                    .count();
+        }
+
+        public static int getAvailableUnits(String facilityName) {
+            return TOTAL_UNITS - getBookedUnits(facilityName);
+        }
+
+        @Override
+        public String toString() {
+            return facilityName + " - " + bookingDate + " - " + bookingTime;
+        }
+
+    }
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+
+public class StadiumManager {
+    private final List<StadiumFacility> facilities = new ArrayList<>();
+
+    // Add a facility (Seating Section or Conference Room)
+    public void addFacility(Scanner scanner) {
+        System.out.println("Choose Facility Type:");
+        System.out.println("1. Seating Section");
+        System.out.println("2. Conference Room");
+        System.out.print("Enter your choice: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        System.out.print("Enter facility name: ");
+        String name = scanner.nextLine();
+        if (name.isEmpty()) {
+            System.out.println("Invalid name. Please enter a valid name.");
+            return;
+        }
+        System.out.print("Enter facility capacity: ");
+        int capacity = scanner.nextInt();
+        if (capacity <= 0) {
+            System.out.println("Invalid capacity. Please enter a valid capacity.");
+            return;
+        }
+        scanner.nextLine(); // Consume newline
+
+        StadiumFacility facility;
+        if (choice == 1) {
+            System.out.print("Enter seat type (VIP/Regular): ");
+            String seatType = scanner.nextLine();
+            facility = new SeatingSection(name, capacity, seatType);
+        } else if (choice == 2) {
+            System.out.print("Is a projector available? (true/false): ");
+            boolean projectorAvailable = scanner.nextBoolean();
+            scanner.nextLine(); // Consume newline
+            facility = new ConferenceRoom(name, capacity, projectorAvailable);
+        } else {
+            System.out.println("Invalid choice.");
+            return;
+        }
+
+        facilities.add(facility);
+        System.out.println("Facility added successfully!");
+    }
+
+    // View all facilities
+    public void viewFacilities() {
+        if (facilities.isEmpty()) {
+            System.out.println("No facilities available.");
+        } else {
+            for (StadiumFacility facility : facilities) {
+                System.out.println(facility);
+            }
+        }
+    }
+
+    // Make a booking for a facility
+    public void makeBooking(Scanner scanner) {
+        System.out.print("Enter facility name: ");
+        String facilityName = scanner.nextLine();
+
+        System.out.print("Enter booking date (yyyy-MM-dd): ");
+        String bookingDate = scanner.nextLine();
+        if (!bookingDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            System.out.println("Invalid date format. Please use yyyy-MM-dd.");
+            return;
+        }
+
+        // Validate that the date is not in the past
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate enteredDate = java.time.LocalDate.parse(bookingDate);
+        if (enteredDate.isBefore(today)) {
+            System.out.println("Cannot book for a past date. Please select a valid date.");
+            return;
+        }
+
+        System.out.print("Enter booking time (HH:mm): ");
+        String bookingTime = scanner.nextLine();
+        if (!bookingTime.matches("^([01]?\\d|2[0-3]):[0-5]\\d$")) {
+            System.out.println("Invalid time format. Please use HH:mm.");
+            return;
+        }
+
+        for (StadiumFacility facility : facilities) {
+            if (facility.getFacilityName().equalsIgnoreCase(facilityName)) {
+                System.out.print("Enter number of units to book: ");
+                int units = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+
+                if (units <= 0) {
+                    System.out.println("Invalid number of booked units");
+                    return;
+                }
+
+                if (facility.checkAvailability(units)) {
+                    facility.bookUnits(units);
+                    if (Booking.isAvailable(facilityName, bookingDate, bookingTime)) {
+                        Booking.makeBooking(facilityName, bookingDate, bookingTime); // Add booking with date and time
+                        return;
+                    } else {
+                        System.out.println("Booking failed. Facility not available for the selected date and time.");
+                    }
+                } else {
+                    System.out.println("Booking cannot proceed. Insufficient capacity.");
+                }
+                return;
+            }
+        }
+        System.out.println("Facility not found.");
+    }
+
+    // Cancel a booking
+    public void cancelBooking(Scanner scanner) {
+        System.out.print("Enter facility name: ");
+        String facilityName = scanner.nextLine();
+
+        System.out.print("Enter booking date (yyyy-MM-dd): ");
+        String bookingDate = scanner.nextLine();
+
+        System.out.print("Enter booking time (HH:mm): ");
+        String bookingTime = scanner.nextLine();
+
+        boolean isCanceled = Booking.cancelBooking(facilityName, bookingDate, bookingTime);
+        if (!isCanceled) {
+            System.out.println("Booking not found.");
+        }
+    }
+    // View all bookings
+    public void viewBookings() {
+        System.out.println("Bookings for all facilities:");
+        Booking.viewBookings().forEach(System.out::println); // Displays all bookings with date and time
+    }
+
+    // Add a facility (GUI method)
+    public void addFacility(String name, int capacity, String seatType, boolean hasProjector) {
+        StadiumFacility facility;
+        if (seatType != null && !seatType.isEmpty()) {
+            facility = new SeatingSection(name, capacity, seatType);
+        } else {
+            facility = new ConferenceRoom(name, capacity, hasProjector);
+        }
+        facilities.add(facility);
+    }
+
+    // Get all facilities as a formatted string for the GUI
+    public String getFacilitiesAsString() {
+        if (facilities.isEmpty()) {
+            return "No facilities available.";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (StadiumFacility facility : facilities) {
+            sb.append(facility).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public boolean makeBooking(String facilityName, String bookingDate, String bookingTime) {
+        for (StadiumFacility facility : facilities) {
+            if (facility.getFacilityName().equalsIgnoreCase(facilityName)) {
+                if (Booking.isAvailable(facilityName, bookingDate, bookingTime)) {
+                    Booking.makeBooking(facilityName, bookingDate, bookingTime);
+
+                    int bookedUnits = Booking.getBookedUnits(facilityName);
+                    System.out.println("Booking successful! Total booked units for " + facilityName + ": " + bookedUnits);
+                    return true;
+                } else {
+                    System.out.println("Booking failed. Facility not available for the selected date and time.");
+                    return false;
+                }
+            }
+        }
+        System.out.println("Facility not found.");
+        return false;
+    }
+
+    public String getBookingsAsString() {
+        StringBuilder sb = new StringBuilder();
+        for (String booking : Booking.viewBookings()) {
+            sb.append(booking).append("\n");
+        }
+        for (StadiumFacility facility : facilities) {
+            int bookedUnits = Booking.getBookedUnits(facility.getFacilityName());
+            int availableUnits = Booking.getAvailableUnits(facility.getFacilityName());
+            sb.append("Facility: ").append(facility.getFacilityName())
+                    .append(", Booked Units: ").append(bookedUnits)
+                    .append(", Available Units: ").append(availableUnits).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public boolean cancelBooking(String facilityName, String bookingDate, String bookingTime) {
+        boolean success = Booking.cancelBooking(facilityName, bookingDate, bookingTime);
+        if (success) {
+            System.out.println("Booking canceled successfully for " + facilityName + " on " + bookingDate + " at " + bookingTime + "!");
+        } else {
+            System.out.println("Booking not found.");
+        }
+        return success;
+    }
+}
+
+
+public class SeatingSection extends StadiumFacility {
+    private final String seatType; // VIP or Regular
+
+    public SeatingSection(String facilityName, int capacity, String seatType) {
+        super(facilityName, capacity);
+        this.seatType = seatType;
+    }
+
+    public String getSeatType() {
+        return seatType;
+    }
+
+    @Override
+    public String toString() {
+        return "Seating Section - Facility Name: " + getFacilityName() +
+                ", Capacity: " + getCapacity() +
+                ", Current Bookings: " + getCurrentBookings() +
+                ", Seat Type: " + seatType +
+                ", Available: " + (checkAvailability(1) ? "Yes" : "No");
+    }
+}
+
+
+public class ConferenceRoom extends StadiumFacility {
+    private final boolean hasProjector;
+    public ConferenceRoom(String facilityName, int capacity, boolean hasProjector) {
+        super(facilityName, capacity);
+        this.hasProjector = hasProjector;
+    }
+    public boolean isHasProjector() {
+        return hasProjector;
+    }
+    @Override
+    public String toString() {
+        return "Conference Room - Facility Name: " + getFacilityName() +
+                ", Capacity: " + getCapacity() +
+                ", Current Bookings: " + getCurrentBookings() +
+                ", Has Projector: " + (hasProjector ? "Yes" : "No") +
+                ", Available: " + (checkAvailability(1) ? "Yes" : "No");
+    }
+}
